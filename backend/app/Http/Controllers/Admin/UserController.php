@@ -6,19 +6,25 @@ use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
     public function index(Request $request)
     {
+        $like = DB::connection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
+        $search = $request->query('search');
+
         $users = User::query()
-            ->when($request->search, fn ($q) => $q->where('name', 'like', "%{$request->search}%")
-                ->orWhere('email', 'like', "%{$request->search}%")
-                ->orWhere('identifier', 'like', "%{$request->search}%"))
+            ->when($search, fn ($q) => $q->where(function ($q) use ($search, $like) {
+                $q->where('name', $like, "%{$search}%")
+                    ->orWhere('email', $like, "%{$search}%")
+                    ->orWhere('identifier', $like, "%{$search}%");
+            }))
             ->with('roles:id,name')
             ->orderBy('name')
-            ->paginate(25);
+            ->paginate(min($request->integer('per_page', 25), 100));
 
         return response()->json($users);
     }

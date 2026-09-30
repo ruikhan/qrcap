@@ -49,6 +49,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/admin/users/{user}', [UserController::class, 'update']);
 
         Route::get('/admin/groups', [GroupController::class, 'index']);
+        Route::get('/admin/groups/{group}', [GroupController::class, 'show']);
         Route::post('/admin/groups', [GroupController::class, 'store']);
         Route::put('/admin/groups/{group}', [GroupController::class, 'update']);
 

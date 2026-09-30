@@ -15,11 +15,19 @@ class AdminUserSeeder extends Seeder
      */
     public function run(): void
     {
+        $password = config('attendance.admin_seed_password');
+        if (! $password) {
+            if (app()->environment('production')) {
+                throw new \RuntimeException('Set ADMIN_SEED_PASSWORD before seeding in production.');
+            }
+            $password = 'ChangeMe!12345'; // local development only
+        }
+
         $admin = User::firstOrCreate(
-            ['email' => 'admin@qrcap.test'],
+            ['email' => config('attendance.admin_seed_email')],
             [
                 'name' => 'QRCAP Super Admin',
-                'password' => Hash::make('ChangeMe!12345'),
+                'password' => Hash::make($password),
                 'account_status' => 'active',
             ]
         );

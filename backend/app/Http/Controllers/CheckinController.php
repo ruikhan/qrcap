@@ -55,7 +55,7 @@ class CheckinController extends Controller
             return response()->json(['message' => 'This QR code is invalid or has expired.'], 422);
         }
 
-        $session = $qrToken->session()->lockForUpdate()->first();
+        $session = $qrToken->session;
         if (! $session->isOpen()) {
             return response()->json(['message' => 'This session is not currently open.'], 422);
         }
@@ -127,7 +127,7 @@ class CheckinController extends Controller
             return ['present', 0];
         }
 
-        return ['late', $now->diffInMinutes($session->starts_at)];
+        return ['late', (int) $session->starts_at->diffInMinutes($now)];
     }
 
     private function withinGeofence($session, float $lat, float $lng): bool

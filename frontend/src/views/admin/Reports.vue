@@ -5,16 +5,42 @@ import AppShell from '../../components/AppShell.vue'
 
 const records = ref([])
 const filters = reactive({ status: '', date_from: '', date_to: '' })
+const error = ref('')
+const exporting = ref(false)
 
 async function load() {
-  const { data } = await client.get('/admin/reports/attendance', { params: filters })
-  records.value = data.data
+  error.value = ''
+  try {
+    const { data } = await client.get('/admin/reports/attendance', { params: filters })
+    records.value = data.data
+  } catch (e) {
+    error.value = e.response?.data?.message || 'Could not load report.'
+  }
 }
 onMounted(load)
 
-function exportCsv() {
-  const params = new URLSearchParams({ ...filters, format: 'csv' }).toString()
-  window.open(`${import.meta.env.VITE_API_BASE_URL}/admin/reports/attendance?${params}`, '_blank')
+// window.open() cannot send the Bearer token, so download through axios as a blob.
+async function exportCsv() {
+  error.value = ''
+  exporting.value = true
+  try {
+    const res = await client.get('/admin/reports/attendance', {
+      params: { ...filters, format: 'csv' },
+      responseType: 'blob',
+    })
+    const url = URL.createObjectURL(res.data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'attendance_report.csv'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    error.value = 'Could not export CSV.'
+  } finally {
+    exporting.value = false
+  }
 }
 </script>
 
@@ -35,8 +61,9 @@ function exportCsv() {
       <label>From<input class="input" type="date" v-model="filters.date_from" /></label>
       <label>To<input class="input" type="date" v-model="filters.date_to" /></label>
       <button class="btn" @click="load">Apply</button>
-      <button class="btn btn-primary" @click="exportCsv">Export CSV</button>
+      <button class="btn btn-primary" :disabled="exporting" @click="exportCsv">{{ exporting ? 'Exporting…' : 'Export CSV' }}</button>
     </div>
+    <p v-if="error" style="color:#f87171;">{{ error }}</p>
 
     <div class="card">
       <table>

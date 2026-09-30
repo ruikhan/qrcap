@@ -9,9 +9,14 @@ use Illuminate\Http\Request;
 
 class GroupController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return Group::withCount('members')->orderBy('name')->paginate(25);
+        return Group::withCount('members')->orderBy('name')->paginate(min($request->integer('per_page', 25), 100));
+    }
+
+    public function show(Group $group)
+    {
+        return response()->json($group->load('members:id,name,email,identifier')->loadCount('members'));
     }
 
     public function store(Request $request)

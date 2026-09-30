@@ -7,6 +7,7 @@ use App\Models\AttendanceSession;
 use App\Services\AuditLogService;
 use App\Services\QrTokenService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class SessionController extends Controller
 {
@@ -93,10 +94,45 @@ class SessionController extends Controller
             'present_grace_minutes' => ['nullable', 'integer', 'min:0'],
             'qr_rotation_seconds' => ['nullable', 'integer', 'min:5'],
             'qr_expiry_seconds' => ['nullable', 'integer', 'min:10'],
+            'require_location' => ['nullable', 'boolean'],
+            'geofence_lat' => ['nullable', 'numeric'],
+            'geofence_lng' => ['nullable', 'numeric'],
+            'geofence_radius_meters' => ['nullable', 'integer', 'min:1'],
+            'user_ids' => ['nullable', 'array'],
+            'user_ids.*' => ['integer', 'exists:users,id'],
+            'group_ids' => ['nullable', 'array'],
+            'group_ids.*' => ['integer', 'exists:groups,id'],
+            'staff_ids' => ['nullable', 'array'],
+            'staff_ids.*' => ['integer', 'exists:users,id'],
         ]);
 
-        $before = $session->toArray();
-        $session->update($data);
+        $before = $session->load('eligibility')->toArray();
+
+        DB::transaction(function () use ($session, $data) {
+            $session->update(collect($data)->only([
+                'title', 'description', 'starts_at', 'ends_at', 'location',
+                'present_grace_minutes', 'qr_rotation_seconds', 'qr_expiry_seconds',
+                'require_location', 'geofence_lat', 'geofence_lng', 'geofence_radius_meters',
+            ])->toArray());
+
+            if (array_key_exists('user_ids', $data)) {
+                $session->eligibility()->whereNotNull('user_id')->delete();
+                foreach ($data['user_ids'] ?? [] as $userId) {
+                    $session->eligibility()->create(['user_id' => $userId]);
+                }
+            }
+            if (array_key_exists('group_ids', $data)) {
+                $session->eligibility()->whereNotNull('group_id')->delete();
+                foreach ($data['group_ids'] ?? [] as $groupId) {
+                    $session->eligibility()->create(['group_id' => $groupId]);
+                }
+            }
+            if (array_key_exists('staff_ids', $data)) {
+                $session->staff()->sync($data['staff_ids'] ?? []);
+            }
+        });
+
+        $session = $session->fresh(['eligibility', 'staff']);
         $this->audit->log($request->user(), 'session.updated', 'attendance_sessions', $session->id, $before, $session->toArray(), $request);
 
         return response()->json($session);

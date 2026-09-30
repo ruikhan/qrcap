@@ -104,10 +104,10 @@ async function onCorrected() {
     </div>
     <p v-if="error" style="color:#f87171;">{{ error }}</p>
 
-    <div class="grid" style="grid-template-columns: 320px 1fr; align-items:start;">
+    <div class="grid" style="grid-template-columns: 380px 1fr; align-items:start;">
       <div class="card" style="text-align:center;">
         <template v-if="session.status === 'open' && qrPayload">
-          <QrcodeVue :value="qrPayload" :size="240" level="M" />
+          <QrcodeVue :value="qrPayload" :size="300" level="L" :margin="2" />
           <p style="color:var(--muted); margin-top:0.75rem;">Refreshes in {{ qrCountdown }}s</p>
         </template>
         <p v-else style="color:var(--muted);">QR code appears once the session is open.</p>

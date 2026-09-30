@@ -35,7 +35,7 @@ class CheckinController extends Controller
         }
 
         return response()->json([
-            'session' => $session->only('id', 'title', 'description', 'location', 'starts_at', 'ends_at'),
+            'session' => $session->only('id', 'title', 'description', 'location', 'starts_at', 'ends_at', 'require_location'),
             'already_checked_in' => $session->attendanceRecords()->where('user_id', $user->id)->exists(),
         ]);
     }
